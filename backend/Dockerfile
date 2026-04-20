@@ -1,5 +1,6 @@
 # ── Build stage ───────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 COPY package*.json ./
@@ -11,6 +12,7 @@ RUN npx tsc --noEmitOnError false || true
 
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 ENV NODE_ENV=production
