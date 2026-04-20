@@ -1,0 +1,52 @@
+services:
+  nexo-backend:
+    image: ghcr.io/proddy-0/nexo-backend:latest
+    container_name: nexo-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3200
+      - NODE_ENV=production
+    depends_on:
+      nexo-db:
+        condition: service_healthy
+    networks:
+      - nexo_net
+      - proxy_net
+
+  nexo-frontend:
+    image: ghcr.io/proddy-0/nexo-frontend:latest
+    container_name: nexo-frontend
+    restart: unless-stopped
+    depends_on:
+      - nexo-backend
+    networks:
+      - nexo_net
+      - proxy_net
+
+  nexo-db:
+    image: postgres:16-alpine
+    container_name: nexo-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=nexo
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=nexo
+    volumes:
+      - nexo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexo_net
+
+volumes:
+  nexo_pgdata:
+
+networks:
+  nexo_net:
+  proxy_net:
+    external: true

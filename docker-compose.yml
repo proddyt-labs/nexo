@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  nexo-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: nexo
+      POSTGRES_USER: nexo
+      POSTGRES_PASSWORD: nexo_pass
+    volumes:
+      - nexo_db_data:/var/lib/postgresql/data
+    networks:
+      - nexo_net
+
+  nexo-backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://nexo:nexo_pass@nexo-db:5432/nexo
+      JWT_SECRET: dev-secret-change-in-prod
+      PORT: 3200
+    depends_on:
+      - nexo-db
+    networks:
+      - nexo_net
+    command: >
+      sh -c "npx prisma migrate deploy && node dist/index.js"
+
+  nexo-frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - nexo-backend
+    networks:
+      - nexo_net
+
+volumes:
+  nexo_db_data:
+
+networks:
+  nexo_net:

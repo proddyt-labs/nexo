@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspaceMembers WorkspaceMember[]
+  notes            Note[]
+  dailyNotes       DailyNote[]
+  comments         Comment[]
+  tasks            Task[]  @relation("TaskAuthor")
+  assignedTasks    Task[]  @relation("TaskAssignee")
+}
+
+// ─────────────────────────────────────────
+// WORKSPACES
+// ─────────────────────────────────────────
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     WorkspaceMember[]
+  collections Collection[]
+  notes       Note[]
+  tags        Tag[]
+  dailyNotes  DailyNote[]
+  tasks       Task[]
+}
+
+model WorkspaceMember {
+  id          String         @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole  @default(MEMBER)
+  joinedAt    DateTime       @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// ─────────────────────────────────────────
+// COLLECTIONS (pastas)
+// ─────────────────────────────────────────
+model Collection {
+  id          String  @id @default(uuid())
+  workspaceId String
+  parentId    String?
+  name        String
+  icon        String?
+  color       String?
+  position    Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent    Collection? @relation("CollectionTree", fields: [parentId], references: [id])
+  children  Collection[] @relation("CollectionTree")
+  notes     Note[]
+}
+
+// ─────────────────────────────────────────
+// NOTES
+// ─────────────────────────────────────────
+model Note {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  collectionId String?
+  authorId     String
+  title        String    @default("Sem título")
+  content      String    @default("")  // JSON do TipTap
+  emoji        String?
+  isPublished  Boolean   @default(false)
+  isPinned     Boolean   @default(false)
+  position     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  collection Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  author     User        @relation(fields: [authorId], references: [id])
+
+  tags      NoteTag[]
+  linksFrom NoteLink[]  @relation("LinkFrom")
+  linksTo   NoteLink[]  @relation("LinkTo")
+  comments  Comment[]
+}
+
+// Ligações entre notas (o graph)
+model NoteLink {
+  id     String @id @default(uuid())
+  fromId String
+  toId   String
+
+  from Note @relation("LinkFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Note @relation("LinkTo",   fields: [toId],   references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+}
+
+// ─────────────────────────────────────────
+// DAILY NOTES
+// ─────────────────────────────────────────
+model DailyNote {
+  id          String   @id @default(uuid())
+  workspaceId String
+  authorId    String
+  date        DateTime // apenas a data (sem hora)
+  content     String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@unique([workspaceId, authorId, date])
+}
+
+// ─────────────────────────────────────────
+// TAGS
+// ─────────────────────────────────────────
+model Tag {
+  id          String @id @default(uuid())
+  workspaceId String
+  name        String
+  color       String @default("#60a5fa")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notes     NoteTag[]
+
+  @@unique([workspaceId, name])
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId],  references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+}
+
+// ─────────────────────────────────────────
+// TASKS
+// ─────────────────────────────────────────
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  workspaceId String
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User         @relation("TaskAuthor", fields: [authorId], references: [id])
+  assigneeId  String?
+  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  title       String
+  description String       @default("")
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  position    Float        @default(0)
+  dueDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// ─────────────────────────────────────────
+// COMMENTS
+// ─────────────────────────────────────────
+model Comment {
+  id        String   @id @default(uuid())
+  noteId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note   Note @relation(fields: [noteId],   references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+}
