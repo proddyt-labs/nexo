@@ -84,13 +84,14 @@ router.post("/", async (req, res) => {
 
 // ── PATCH /workspaces/:workspaceId/tasks/:id
 router.patch("/:id", async (req, res) => {
-  if (!await assertMember(req.params.workspaceId, req.userId, true))
+  const { workspaceId, id } = req.params as Record<string, string>;
+  if (!await assertMember(workspaceId, req.userId, true))
     return res.status(403).json({ message: "Sem permissão" });
 
   const { title, description, status, priority, position, assigneeId, dueDate } = req.body ?? {};
 
   const task = await prisma.task.update({
-    where: { id: req.params.id },
+    where: { id },
     data: {
       ...(title !== undefined       && { title }),
       ...(description !== undefined && { description }),
@@ -107,11 +108,12 @@ router.patch("/:id", async (req, res) => {
 
 // ── DELETE /workspaces/:workspaceId/tasks/:id
 router.delete("/:id", async (req, res) => {
-  const member = await assertMember(req.params.workspaceId, req.userId, true);
+  const { workspaceId, id } = req.params as Record<string, string>;
+  const member = await assertMember(workspaceId, req.userId, true);
   if (!member) return res.status(403).json({ message: "Sem permissão" });
 
   const task = await prisma.task.findFirst({
-    where: { id: req.params.id, workspaceId: req.params.workspaceId },
+    where: { id, workspaceId },
     select: { authorId: true },
   });
   if (!task) return res.status(404).json({ message: "Task não encontrada" });
@@ -123,13 +125,14 @@ router.delete("/:id", async (req, res) => {
 
   if (!canDelete) return res.status(403).json({ message: "Sem permissão para deletar" });
 
-  await prisma.task.delete({ where: { id: req.params.id } });
+  await prisma.task.delete({ where: { id } });
   res.status(204).send();
 });
 
 // ── POST /workspaces/:workspaceId/tasks/reorder
 router.post("/reorder", async (req, res) => {
-  if (!await assertMember(req.params.workspaceId, req.userId, true))
+  const { workspaceId } = req.params as Record<string, string>;
+  if (!await assertMember(workspaceId, req.userId, true))
     return res.status(403).json({ message: "Sem permissão" });
 
   const { tasks } = req.body ?? {};
