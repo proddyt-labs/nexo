@@ -11,7 +11,7 @@ ENV VITE_CLIENT_ID=$VITE_CLIENT_ID
 ENV VITE_REDIRECT_URI=$VITE_REDIRECT_URI
 RUN npm run build
 
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM caddy:2-alpine
+COPY --from=builder /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile
 EXPOSE 80

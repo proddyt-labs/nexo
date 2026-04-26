@@ -1,0 +1,24 @@
+:80 {
+	root * /srv
+	encode gzip zstd
+
+	# API e WebSocket → backend
+	@api path /api/* /socket.io/*
+	handle @api {
+		reverse_proxy nexo-backend:3200
+	}
+
+	# index.html nunca é cacheado (garante deploys sempre frescos)
+	@html path / /index.html
+	header @html Cache-Control "no-store, no-cache, must-revalidate"
+
+	# assets com hash no nome → cache eterno
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# SPA fallback
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}
