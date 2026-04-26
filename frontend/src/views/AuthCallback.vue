@@ -30,7 +30,7 @@ function retry() {
 onMounted(async () => {
   const code = route.query.code as string | undefined;
   if (!code) {
-    if (auth.token) router.replace("/");
+    if (auth.isLoggedIn) router.replace("/");
     else auth.login();
     return;
   }

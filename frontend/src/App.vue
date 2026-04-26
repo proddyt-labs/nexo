@@ -8,7 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 onMounted(() => {
-  if (localStorage.getItem("nexo_token")) {
+  if (localStorage.getItem("auth_token")) {
     void auth.fetchMe();
   }
 });

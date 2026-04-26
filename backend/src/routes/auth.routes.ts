@@ -40,13 +40,14 @@ router.post("/callback", async (req, res) => {
 });
 
 // GET /auth/me — perfil do usuário autenticado
+// Padronizado: response sempre `{ user: {...} }` (igual time-work)
 router.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.userId },
     select: { id: true, username: true, email: true, name: true, avatar: true, createdAt: true },
   });
   if (!user) return res.status(404).json({ message: "Usuário não encontrado" });
-  res.json(user);
+  res.json({ user });
 });
 
 // PATCH /auth/me — atualiza name/avatar
@@ -57,7 +58,7 @@ router.patch("/me", requireAuth, async (req, res) => {
     data: { ...(name && { name }), ...(avatar && { avatar }) },
     select: { id: true, username: true, email: true, name: true, avatar: true },
   });
-  res.json(user);
+  res.json({ user });
 });
 
 export default router;

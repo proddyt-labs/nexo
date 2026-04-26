@@ -43,7 +43,7 @@ router.beforeEach((to) => {
   if (to.meta.guest) return true;
 
   const auth = useAuthStore();
-  if (to.meta.requiresAuth && !auth.token) {
+  if (to.meta.requiresAuth && !auth.isLoggedIn) {
     window.location.href = buildAuthorizeUrl();
     return false;
   }
