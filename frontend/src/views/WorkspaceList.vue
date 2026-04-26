@@ -2,8 +2,12 @@
   <div class="min-h-screen bg-slate-950 flex flex-col">
     <!-- Header -->
     <header class="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="font-mono text-lg font-medium" style="color: var(--nx-primary)">{·}</span>
+      <div class="flex items-center gap-3">
+        <a href="https://proddyt.site" class="flex items-center gap-1.5 font-mono text-xs border border-blue-900/40 text-blue-400 hover:bg-blue-900/20 px-2.5 py-1.5 rounded-lg transition-colors">
+          <span>&lt;·&gt;</span><span>Home</span>
+        </a>
+        <div class="w-px h-4 bg-slate-700" />
+        <span class="font-mono text-base font-medium" style="color: var(--nx-primary)">{·}</span>
         <span class="font-mono text-sm" style="color: var(--nx-muted)">nexo</span>
       </div>
       <div class="flex items-center gap-3">

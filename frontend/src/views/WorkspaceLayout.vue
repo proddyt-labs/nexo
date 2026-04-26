@@ -120,7 +120,7 @@
 
       <!-- User footer -->
       <div class="px-3 pb-3 flex items-center gap-2">
-        <a href="https://proddyt.site" class="font-mono text-xs border border-blue-900/50 text-blue-400 hover:bg-blue-900/20 px-1.5 py-0.5 rounded transition-colors" title="Hub">&lt;·&gt;</a>
+        <a href="https://proddyt.site" class="flex items-center gap-1 font-mono text-xs border border-blue-900/40 text-blue-400 hover:bg-blue-900/20 px-2 py-1 rounded-lg transition-colors"><span>&lt;·&gt;</span><span>Home</span></a>
         <span class="text-xs text-slate-400 truncate flex-1">{{ auth.displayName }}</span>
         <button @click="auth.logout()" class="text-slate-600 hover:text-slate-300 transition-colors" title="Sair">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
