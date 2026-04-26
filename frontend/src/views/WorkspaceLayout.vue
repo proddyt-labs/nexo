@@ -2,8 +2,14 @@
   <div class="flex h-screen bg-slate-950 overflow-hidden">
     <!-- Sidebar -->
     <aside class="w-60 flex-shrink-0 bg-slate-900/60 border-r border-slate-800 flex flex-col">
+      <!-- Brand -->
+      <div class="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+        <span class="font-mono text-base font-medium" style="color: var(--nx-primary)">{·}</span>
+        <span class="font-mono text-xs" style="color: var(--nx-muted)">nexo</span>
+      </div>
+
       <!-- Workspace header -->
-      <div class="px-3 py-4 border-b border-slate-800">
+      <div class="px-3 py-2.5 border-b border-slate-800">
         <button @click="router.push('/')" class="flex items-center gap-2 w-full hover:bg-slate-800/60 rounded-lg px-2 py-1.5 transition-colors group">
           <span class="text-lg">{{ store.active?.icon ?? "📁" }}</span>
           <span class="text-sm font-medium text-white truncate flex-1 text-left">{{ store.active?.name }}</span>
@@ -114,9 +120,7 @@
 
       <!-- User footer -->
       <div class="px-3 pb-3 flex items-center gap-2">
-        <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
-          {{ auth.displayName.charAt(0).toUpperCase() }}
-        </div>
+        <a href="https://proddyt.site" class="font-mono text-xs border border-blue-900/50 text-blue-400 hover:bg-blue-900/20 px-1.5 py-0.5 rounded transition-colors" title="Hub">&lt;·&gt;</a>
         <span class="text-xs text-slate-400 truncate flex-1">{{ auth.displayName }}</span>
         <button @click="auth.logout()" class="text-slate-600 hover:text-slate-300 transition-colors" title="Sair">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
