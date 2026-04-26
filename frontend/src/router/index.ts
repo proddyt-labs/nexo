@@ -1,13 +1,13 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
+import { useAuthStore, buildAuthorizeUrl } from "@/stores/auth";
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: "/login",
-      name: "login",
-      component: () => import("@/views/LoginView.vue"),
+      path: "/auth/callback",
+      name: "callback",
+      component: () => import("@/views/AuthCallback.vue"),
       meta: { guest: true },
     },
     {
@@ -27,55 +27,27 @@ const router = createRouter({
       component: () => import("@/views/WorkspaceLayout.vue"),
       meta: { requiresAuth: true },
       children: [
-        {
-          path: "",
-          name: "workspace-home",
-          component: () => import("@/views/WorkspaceHome.vue"),
-        },
-        {
-          path: "notes/:noteId",
-          name: "note",
-          component: () => import("@/views/NoteEditor.vue"),
-        },
-        {
-          path: "daily",
-          name: "daily",
-          component: () => import("@/views/DailyNoteView.vue"),
-        },
-        {
-          path: "graph",
-          name: "graph",
-          component: () => import("@/views/GraphView.vue"),
-        },
-        {
-          path: "members",
-          name: "members",
-          component: () => import("@/views/MembersView.vue"),
-        },
-        {
-          path: "kanban",
-          name: "kanban",
-          component: () => import("@/views/KanbanView.vue"),
-        },
-        {
-          path: "settings",
-          name: "settings",
-          component: () => import("@/views/SettingsView.vue"),
-        },
+        { path: "", name: "workspace-home", component: () => import("@/views/WorkspaceHome.vue") },
+        { path: "notes/:noteId", name: "note", component: () => import("@/views/NoteEditor.vue") },
+        { path: "daily", name: "daily", component: () => import("@/views/DailyNoteView.vue") },
+        { path: "graph", name: "graph", component: () => import("@/views/GraphView.vue") },
+        { path: "members", name: "members", component: () => import("@/views/MembersView.vue") },
+        { path: "kanban", name: "kanban", component: () => import("@/views/KanbanView.vue") },
+        { path: "settings", name: "settings", component: () => import("@/views/SettingsView.vue") },
       ],
     },
   ],
 });
 
-router.beforeEach(async (to) => {
+router.beforeEach((to) => {
+  if (to.meta.guest) return true;
+
   const auth = useAuthStore();
-
-  if (!auth.user && auth.token) {
-    await auth.fetchMe();
+  if (to.meta.requiresAuth && !auth.token) {
+    window.location.href = buildAuthorizeUrl();
+    return false;
   }
-
-  if (to.meta.requiresAuth && !auth.isLoggedIn) return "/login";
-  if (to.meta.guest && auth.isLoggedIn) return "/";
+  return true;
 });
 
 export default router;

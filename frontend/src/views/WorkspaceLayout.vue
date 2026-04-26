@@ -118,7 +118,7 @@
           {{ auth.displayName.charAt(0).toUpperCase() }}
         </div>
         <span class="text-xs text-slate-400 truncate flex-1">{{ auth.displayName }}</span>
-        <button @click="auth.logout(); router.push('/login')" class="text-slate-600 hover:text-slate-300 transition-colors" title="Sair">
+        <button @click="auth.logout()" class="text-slate-600 hover:text-slate-300 transition-colors" title="Sair">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

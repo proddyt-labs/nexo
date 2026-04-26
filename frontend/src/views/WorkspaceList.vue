@@ -13,7 +13,7 @@
       </div>
       <div class="flex items-center gap-3">
         <span class="text-sm text-slate-400">{{ auth.displayName }}</span>
-        <button @click="auth.logout(); router.push('/login')" class="btn-ghost text-xs">Sair</button>
+        <button @click="auth.logout()" class="btn-ghost text-xs">Sair</button>
       </div>
     </header>
 

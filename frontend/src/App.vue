@@ -7,5 +7,9 @@ import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
-onMounted(() => auth.fetchMe());
+onMounted(() => {
+  if (localStorage.getItem("nexo_token")) {
+    void auth.fetchMe();
+  }
+});
 </script>

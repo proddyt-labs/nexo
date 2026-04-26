@@ -1,12 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "nexo-secret-change-me";
-
-export interface AuthPayload {
-  userId: string;
-}
+const GATE_URL = process.env.GATE_URL ?? "http://localhost:3100";
 
 declare global {
   namespace Express {
@@ -16,32 +11,61 @@ declare global {
   }
 }
 
-export function signToken(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "30d" });
-}
-
-export function verifyToken(token: string): AuthPayload {
-  return jwt.verify(token, JWT_SECRET) as AuthPayload;
+interface GateUserInfo {
+  sub: string;
+  username: string;
+  email?: string;
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const auth  = req.headers.authorization ?? "";
+  const auth = req.headers.authorization ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
 
   if (!token) return res.status(401).json({ message: "Token ausente" });
 
   try {
-    const { userId } = verifyToken(token);
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-    if (!user) return res.status(401).json({ message: "Usuário não encontrado" });
-    req.userId = userId;
+    const resp = await fetch(`${GATE_URL}/oauth/userinfo`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!resp.ok) {
+      return res.status(401).json({ message: "Token inválido ou expirado" });
+    }
+
+    const info = (await resp.json()) as GateUserInfo;
+
+    let user = await prisma.user.findUnique({ where: { gateId: info.sub } });
+
+    if (!user) {
+      const byUsername = await prisma.user.findUnique({ where: { username: info.username } });
+      if (byUsername) {
+        user = await prisma.user.update({
+          where: { id: byUsername.id },
+          data: { gateId: info.sub },
+        });
+      }
+    }
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          gateId: info.sub,
+          username: info.username,
+          email: info.email ?? `${info.username}@gate.internal`,
+          name: info.username,
+        },
+      });
+    }
+
+    req.userId = user.id;
     next();
-  } catch {
-    return res.status(401).json({ message: "Token inválido ou expirado" });
+  } catch (err) {
+    console.error("Gate auth error:", err);
+    return res.status(500).json({ message: "Erro ao validar token" });
   }
 }
 
-// Verifica se o usuário é membro do workspace (e retorna o papel)
+// Verifica se o usuário é membro do workspace
 export async function requireWorkspaceMember(
   req: Request,
   res: Response,
@@ -53,4 +77,19 @@ export async function requireWorkspaceMember(
   });
   if (!member) return res.status(403).json({ message: "Sem acesso a este workspace" });
   next();
+}
+
+// Helper for verifying token in inline routes (replaces old verifyToken)
+export async function verifyGateToken(token: string): Promise<{ userId: string } | null> {
+  try {
+    const resp = await fetch(`${GATE_URL}/oauth/userinfo`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return null;
+    const info = (await resp.json()) as GateUserInfo;
+    const user = await prisma.user.findUnique({ where: { gateId: info.sub } });
+    return user ? { userId: user.id } : null;
+  } catch {
+    return null;
+  }
 }

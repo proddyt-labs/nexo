@@ -10,11 +10,25 @@ interface User {
   avatar?: string;
 }
 
+const GATE_URL = import.meta.env.VITE_GATE_URL ?? "http://localhost:3100";
+const CLIENT_ID = import.meta.env.VITE_CLIENT_ID ?? "nexo";
+const REDIRECT_URI = import.meta.env.VITE_REDIRECT_URI ?? "http://localhost:5173/auth/callback";
+
+export function buildAuthorizeUrl(): string {
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    scope: "openid profile",
+  });
+  return `${GATE_URL}/oauth/authorize?${params}`;
+}
+
 export const useAuthStore = defineStore("auth", () => {
-  const user  = ref<User | null>(null);
+  const user = ref<User | null>(null);
   const token = ref<string | null>(localStorage.getItem("nexo_token"));
 
-  const isLoggedIn  = computed(() => !!token.value && !!user.value);
+  const isLoggedIn = computed(() => !!token.value && !!user.value);
   const displayName = computed(() => user.value?.name ?? user.value?.username ?? "");
 
   async function fetchMe() {
@@ -27,25 +41,28 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function login(login: string, password: string) {
-    const { data } = await api.post<{ token: string; user: User }>("/auth/login", { login, password });
-    token.value = data.token;
-    user.value  = data.user;
-    localStorage.setItem("nexo_token", data.token);
+  // Inicia o fluxo OAuth — redireciona pro Gate
+  function login() {
+    window.location.href = buildAuthorizeUrl();
   }
 
-  async function register(payload: { username: string; email: string; password: string; name: string }) {
-    const { data } = await api.post<{ token: string; user: User }>("/auth/register", payload);
-    token.value = data.token;
-    user.value  = data.user;
-    localStorage.setItem("nexo_token", data.token);
+  // Troca o code por access_token via backend (mantém client_secret seguro)
+  async function handleCallback(code: string) {
+    const { data } = await api.post<{ access_token: string }>("/auth/callback", {
+      code,
+      redirectUri: REDIRECT_URI,
+    });
+    token.value = data.access_token;
+    localStorage.setItem("nexo_token", data.access_token);
+    await fetchMe();
   }
 
   function logout() {
-    user.value  = null;
+    user.value = null;
     token.value = null;
     localStorage.removeItem("nexo_token");
+    window.location.href = `${GATE_URL}/auth/logout`;
   }
 
-  return { user, token, isLoggedIn, displayName, fetchMe, login, register, logout };
+  return { user, token, isLoggedIn, displayName, fetchMe, login, handleCallback, logout };
 });

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
@@ -64,9 +65,10 @@ app.get("/api/workspaces/:workspaceId/graph", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ message: "Token ausente" });
   const { prisma } = await import("./lib/prisma");
-  const { verifyToken } = await import("./middleware/auth.middleware");
-  let userId: string;
-  try { userId = verifyToken(token).userId; } catch { return res.status(401).json({ message: "Token inválido" }); }
+  const { verifyGateToken } = await import("./middleware/auth.middleware");
+  const result = await verifyGateToken(token);
+  if (!result) return res.status(401).json({ message: "Token inválido" });
+  const userId = result.userId;
 
   const member = await prisma.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId } },
