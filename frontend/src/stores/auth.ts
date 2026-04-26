@@ -61,7 +61,8 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = null;
     token.value = null;
     localStorage.removeItem("nexo_token");
-    window.location.href = `${GATE_URL}/auth/logout`;
+    const postLogout = encodeURIComponent(window.location.origin + "/");
+    window.location.href = `${GATE_URL}/auth/logout?post_logout_redirect_uri=${postLogout}`;
   }
 
   return { user, token, isLoggedIn, displayName, fetchMe, login, handleCallback, logout };
