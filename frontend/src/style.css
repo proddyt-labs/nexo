@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --nx-primary: #A78BFA;
+  --nx-mid:     #7C3AED;
+  --nx-dark:    #5B21B6;
+  --nx-bg:      #110D1F;
+  --nx-muted:   #8B7FAA;
+}
+
 @layer base {
   body {
     @apply bg-slate-950 text-slate-100 antialiased;
