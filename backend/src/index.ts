@@ -98,6 +98,40 @@ app.get("/api/workspaces/:workspaceId/graph", async (req, res) => {
   });
 });
 
+// ── Internal widget endpoints (Gate only, no public access)
+app.get("/internal/widget/workspaces", async (req, res) => {
+  const gateId = req.query.gateId as string;
+  if (!gateId) { res.status(400).json({ error: "gateId required" }); return; }
+  const { prisma } = await import("./lib/prisma");
+  const user = await prisma.user.findUnique({ where: { gateId } });
+  if (!user) { res.json([]); return; }
+  const workspaces = await prisma.workspace.findMany({
+    where: { members: { some: { userId: user.id } } },
+    select: { id: true, name: true, icon: true },
+    orderBy: { createdAt: "asc" },
+  });
+  res.json(workspaces);
+});
+
+app.post("/internal/widget/quick-note", async (req, res) => {
+  const gateId = req.query.gateId as string;
+  if (!gateId) { res.status(400).json({ error: "gateId required" }); return; }
+  const { workspaceId, title } = req.body ?? {};
+  if (!workspaceId || !title?.trim()) { res.status(400).json({ error: "workspaceId and title required" }); return; }
+  const { prisma } = await import("./lib/prisma");
+  const user = await prisma.user.findUnique({ where: { gateId } });
+  if (!user) { res.status(404).json({ error: "user_not_found" }); return; }
+  const member = await prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: user.id } },
+  });
+  if (!member || member.role === "VIEWER") { res.status(403).json({ error: "no_write_access" }); return; }
+  const note = await prisma.note.create({
+    data: { workspaceId, authorId: user.id, title: title.trim(), content: "" },
+    select: { id: true, title: true },
+  });
+  res.status(201).json(note);
+});
+
 // ── Start
 const PORT = Number(process.env.PORT ?? 3200);
 server.listen(PORT, () => {

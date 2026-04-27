@@ -7,6 +7,7 @@ declare global {
   namespace Express {
     interface Request {
       userId: string;
+      isAdmin?: boolean;
     }
   }
 }
@@ -15,6 +16,7 @@ interface GateUserInfo {
   sub: string;
   username: string;
   email?: string;
+  roles?: string[];
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -58,6 +60,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     req.userId = user.id;
+    req.isAdmin = (info.roles ?? []).includes("admin");
     next();
   } catch (err) {
     console.error("Gate auth error:", err);
@@ -65,17 +68,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 }
 
-// Verifica se o usuário é membro do workspace
+// Verifica se o usuário é membro do workspace (admin do Gate sempre passa)
 export async function requireWorkspaceMember(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
+  if (req.isAdmin) return next();
   const { workspaceId } = req.params;
   const member = await prisma.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: req.userId } },
   });
   if (!member) return res.status(403).json({ message: "Sem acesso a este workspace" });
+  next();
+}
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAdmin) return res.status(403).json({ message: "Forbidden" });
   next();
 }
 

@@ -5,10 +5,11 @@ import { requireAuth } from "../middleware/auth.middleware";
 const router = Router();
 router.use(requireAuth);
 
-// ── GET /workspaces — lista workspaces do usuário
+// ── GET /workspaces — lista workspaces do usuário (admin vê todos)
 router.get("/", async (req, res) => {
+  const where = req.isAdmin ? {} : { members: { some: { userId: req.userId } } };
   const workspaces = await prisma.workspace.findMany({
-    where: { members: { some: { userId: req.userId } } },
+    where,
     include: {
       members: { select: { userId: true, role: true } },
       _count: { select: { notes: true, collections: true } },
@@ -37,10 +38,12 @@ router.post("/", async (req, res) => {
 
 // ── GET /workspaces/:workspaceId
 router.get("/:workspaceId", async (req, res) => {
-  const member = await prisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
-  });
-  if (!member) return res.status(403).json({ message: "Sem acesso" });
+  if (!req.isAdmin) {
+    const member = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
+    });
+    if (!member) return res.status(403).json({ message: "Sem acesso" });
+  }
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: req.params.workspaceId },
@@ -56,11 +59,13 @@ router.get("/:workspaceId", async (req, res) => {
 
 // ── PATCH /workspaces/:workspaceId
 router.patch("/:workspaceId", async (req, res) => {
-  const member = await prisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
-  });
-  if (!member || !["OWNER", "ADMIN"].includes(member.role))
-    return res.status(403).json({ message: "Sem permissão" });
+  if (!req.isAdmin) {
+    const member = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
+    });
+    if (!member || !["OWNER", "ADMIN"].includes(member.role))
+      return res.status(403).json({ message: "Sem permissão" });
+  }
 
   const { name, description, icon } = req.body ?? {};
   const workspace = await prisma.workspace.update({
@@ -72,11 +77,13 @@ router.patch("/:workspaceId", async (req, res) => {
 
 // ── POST /workspaces/:workspaceId/members — convida membro
 router.post("/:workspaceId/members", async (req, res) => {
-  const member = await prisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
-  });
-  if (!member || !["OWNER", "ADMIN"].includes(member.role))
-    return res.status(403).json({ message: "Sem permissão" });
+  if (!req.isAdmin) {
+    const member = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
+    });
+    if (!member || !["OWNER", "ADMIN"].includes(member.role))
+      return res.status(403).json({ message: "Sem permissão" });
+  }
 
   const { usernameOrEmail, role = "MEMBER" } = req.body ?? {};
   const user = await prisma.user.findFirst({
@@ -99,12 +106,14 @@ router.post("/:workspaceId/members", async (req, res) => {
 
 // ── DELETE /workspaces/:workspaceId/members/:userId
 router.delete("/:workspaceId/members/:userId", async (req, res) => {
-  const requester = await prisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
-  });
   const isSelf = req.params.userId === req.userId;
-  if (!requester || (!isSelf && !["OWNER", "ADMIN"].includes(requester.role)))
-    return res.status(403).json({ message: "Sem permissão" });
+  if (!req.isAdmin) {
+    const requester = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.userId } },
+    });
+    if (!requester || (!isSelf && !["OWNER", "ADMIN"].includes(requester.role)))
+      return res.status(403).json({ message: "Sem permissão" });
+  }
 
   await prisma.workspaceMember.delete({
     where: { workspaceId_userId: { workspaceId: req.params.workspaceId, userId: req.params.userId } },
